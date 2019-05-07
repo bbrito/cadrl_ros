@@ -4,7 +4,7 @@ import rospy
 import sys
 from std_msgs.msg import Float32, ColorRGBA, Int32
 from geometry_msgs.msg import PoseStamped, Twist, Vector3, Point
-from ford_msgs.msg import PedTrajVec, NNActions, PlannerMode, Clusters
+from ford_msgs.msg import PedTrajVec, Clusters # dont think we need NNActions
 from visualization_msgs.msg import Marker, MarkerArray
 
 import numpy as np
@@ -47,8 +47,8 @@ class NN_jackal():
         self.nn = nn
         self.actions = actions
         # self.value_net = value_net
-        self.operation_mode = PlannerMode()
-        self.operation_mode.mode = self.operation_mode.NN
+        #self.operation_mode = PlannerMode()
+        #self.operation_mode.mode = self.operation_mode.NN
         
         # for subscribers
         self.pose = PoseStamped()
@@ -56,7 +56,7 @@ class NN_jackal():
         self.psi = 0.0
         self.ped_traj_vec = []
         self.other_agents_state = []
-        self.feasible_actions = NNActions()
+
 
         # for publishers
         self.global_goal = PoseStamped()
@@ -91,8 +91,8 @@ class NN_jackal():
         self.pub_goal_path_marker = rospy.Publisher('~goal_path_marker',Marker,queue_size=1)
         self.sub_pose = rospy.Subscriber('~pose',PoseStamped,self.cbPose)
         self.sub_vel = rospy.Subscriber('~velocity',Vector3,self.cbVel)
-        self.sub_nn_actions = rospy.Subscriber('~safe_actions',NNActions,self.cbNNActions)
-        self.sub_mode = rospy.Subscriber('~mode',PlannerMode, self.cbPlannerMode)
+        #self.sub_nn_actions = rospy.Subscriber('~safe_actions',NNActions,self.cbNNActions)
+        #self.sub_mode = rospy.Subscriber('~mode',PlannerMode, self.cbPlannerMode)
         self.sub_global_goal = rospy.Subscriber('~goal',PoseStamped, self.cbGlobalGoal)
         
         self.use_clusters = True
@@ -109,24 +109,25 @@ class NN_jackal():
     def cbGlobalGoal(self,msg):
         self.new_global_goal_received = True
         self.global_goal = msg
-        self.operation_mode.mode = self.operation_mode.SPIN_IN_PLACE
+        #self.operation_mode.mode = self.operation_mode.SPIN_IN_PLACE
 
         self.goal.pose.position.x = msg.pose.position.x
         self.goal.pose.position.y = msg.pose.position.y
         self.goal.header = msg.header
         self.new_subgoal_received = True
 
-    def cbNNActions(self,msg):
+    #def cbNNActions(self,msg):
         # if msg.header.seq % 20 == 0:
         #     self.goal.pose.position.x = msg.subgoal.x
         #     self.goal.pose.position.y = msg.subgoal.y
         #     self.goal.header = msg.header
         #     self.new_subgoal_received = True
-        self.feasible_actions = msg
+        
+	#self.feasible_actions = msg
 
-    def cbPlannerMode(self, msg):
-        self.operation_mode = msg
-        self.operation_mode.mode = self.operation_mode.NN
+    #def cbPlannerMode(self, msg):
+    #    self.operation_mode = msg
+    #    self.operation_mode.mode = self.operation_mode.NN
 
     def cbPose(self, msg):
         self.num_poses += 1
@@ -308,63 +309,63 @@ class NN_jackal():
             and not self.new_global_goal_received:
             self.stop_moving()
             return
-        elif self.operation_mode.mode==self.operation_mode.NN:
-            desired_yaw = self.desired_action[1]
-            yaw_error = desired_yaw - self.psi
-            if abs(yaw_error) > np.pi:
-                yaw_error -= np.sign(yaw_error)*2*np.pi
-            # print 'yaw_error:',yaw_error
-            # max_yaw_error = 0.8
-            # yaw_error = self.desired_action[1]
-            gain = 2
-            vw = gain*yaw_error
+        #elif self.operation_mode.mode==self.operation_mode.NN:
+        desired_yaw = self.desired_action[1]
+        yaw_error = desired_yaw - self.psi
+        if abs(yaw_error) > np.pi:
+            yaw_error -= np.sign(yaw_error)*2*np.pi
+        # print 'yaw_error:',yaw_error
+        # max_yaw_error = 0.8
+        # yaw_error = self.desired_action[1]
+        gain = 2
+        vw = gain*yaw_error
 
-            use_d_min = False
-            if True: 
-                use_d_min = True
-                # print "vmax:", self.find_vmax(self.d_min,yaw_error)
-                vx = min(self.desired_action[0], self.find_vmax(self.d_min,yaw_error))
-            else:
-                vx = self.desired_action[0]
-            # print "vx:", vx
-            # elif abs(yaw_error) < max_yaw_error:
-            #     vw = gain*yaw_error
-            # else:
-            #     vw = gain*max_yaw_error*np.sign(yaw_error)
-
-            twist = Twist()
-            twist.angular.z = vw
-            twist.linear.x = vx
-            self.pub_twist.publish(twist)
-            self.visualize_action(use_d_min)
-            return
-        elif self.operation_mode.mode == self.operation_mode.SPIN_IN_PLACE:
-            print 'Spinning in place.'
-            self.stop_moving_flag = False
-            angle_to_goal = np.arctan2(self.global_goal.pose.position.y - self.pose.pose.position.y, \
-                self.global_goal.pose.position.x - self.pose.pose.position.x) 
-            global_yaw_error = self.psi - angle_to_goal
-            if abs(global_yaw_error) > 0.5:
-                vx = 0.0
-                vw = 1.0
-                twist = Twist()
-                twist.angular.z = vw
-                twist.linear.x = vx
-                self.pub_twist.publish(twist)
-            else:
-                print 'Done spinning in place'
-                self.operation_mode.mode = self.operation_mode.NN
-                self.new_global_goal_received = False
-            return
+        use_d_min = False
+        if True: 
+            use_d_min = True
+            # print "vmax:", self.find_vmax(self.d_min,yaw_error)
+            vx = min(self.desired_action[0], self.find_vmax(self.d_min,yaw_error))
         else:
-            self.stop_moving()
-            return
+            vx = self.desired_action[0]
+        # print "vx:", vx
+        # elif abs(yaw_error) < max_yaw_error:
+        #     vw = gain*yaw_error
+        # else:
+        #     vw = gain*max_yaw_error*np.sign(yaw_error)
+
+        twist = Twist()
+        twist.angular.z = vw
+        twist.linear.x = vx
+        self.pub_twist.publish(twist)
+        self.visualize_action(use_d_min)
+        return
+        #elif self.operation_mode.mode == self.operation_mode.SPIN_IN_PLACE:
+        #    print 'Spinning in place.'
+        #    self.stop_moving_flag = False
+        #   angle_to_goal = np.arctan2(self.global_goal.pose.position.y - self.pose.pose.position.y, \
+        #        self.global_goal.pose.position.x - self.pose.pose.position.x) 
+        #    global_yaw_error = self.psi - angle_to_goal
+        #    if abs(global_yaw_error) > 0.5:
+        #        vx = 0.0
+        #        vw = 1.0
+        #        twist = Twist()
+        #        twist.angular.z = vw
+        #        twist.linear.x = vx
+        #        self.pub_twist.publish(twist)
+        #    else:
+        #        print 'Done spinning in place'
+        #        self.operation_mode.mode = self.operation_mode.NN
+        #        self.new_global_goal_received = False
+        #    return
+        #else:
+        #    self.stop_moving()
+        #    return
 
     def cbComputeActionGA3C(self, event):
-        if self.operation_mode.mode!=self.operation_mode.NN:
-            print 'Not in NN mode'
-            print self.operation_mode.mode
-            return
+        #if self.operation_mode.mode!=self.operation_mode.NN:
+        #    print 'Not in NN mode'
+        #    print self.operation_mode.mode
+        #    return
 
 
         # construct agent_state
