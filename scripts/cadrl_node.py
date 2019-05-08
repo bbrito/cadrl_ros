@@ -4,9 +4,9 @@ import rospy
 import sys
 from std_msgs.msg import Float32, ColorRGBA, Int32
 from geometry_msgs.msg import PoseStamped, Twist, Vector3, Point
-from ford_msgs.msg import PedTrajVec, NNActions, PlannerMode, Clusters
+from ford_msgs.msg import PedTrajVec,  Clusters #NNActions, PlannerMode,
 from visualization_msgs.msg import Marker, MarkerArray
-
+from lmpcc_msgs.msg import *
 import numpy as np
 import numpy.matlib
 import pickle
@@ -98,7 +98,7 @@ class NN_jackal():
         self.use_clusters = True
         # self.use_clusters = False
         if self.use_clusters:
-            self.sub_clusters = rospy.Subscriber('~clusters',Clusters, self.cbClusters)
+            self.sub_clusters = rospy.Subscriber('~clusters',lmpcc_obstacle_array, self.cbClusters)
         else:
             self.sub_peds = rospy.Subscriber('~peds',PedTrajVec, self.cbPeds)
 
@@ -221,7 +221,6 @@ class NN_jackal():
 
     def cbClusters(self, msg):
         other_agents = []
-
 
         xs = []; ys = []; radii = []; labels = []
         num_clusters = len(msg.labels)
