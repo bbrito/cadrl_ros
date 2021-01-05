@@ -68,7 +68,7 @@ class NN_jackal():
 
         # handle obstacles close to vehicle's front
         self.stop_moving_flag = False
-        self.d_min = 0.0
+        self.d_min = 0.63
         self.new_subgoal_received = False
         self.new_global_goal_received = False
 
@@ -240,7 +240,7 @@ class NN_jackal():
             # radius = PED_RADIUS
             lower_r = obs.major_semiaxis[0]
             upper_r = obs.minor_semiaxis[0]
-            inflation_factor = 1.5
+            inflation_factor = 2.0 #1.5
             radius = max(PED_RADIUS, inflation_factor * max(upper_r, lower_r))
 
             xs.append(x);
