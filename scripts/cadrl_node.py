@@ -68,7 +68,7 @@ class NN_jackal():
 
         # handle obstacles close to vehicle's front
         self.stop_moving_flag = False
-        self.d_min = 0.0
+        self.d_min = 1.0
         self.new_subgoal_received = False
         self.new_global_goal_received = False
 
@@ -98,7 +98,7 @@ class NN_jackal():
         self.use_clusters = True
         # self.use_clusters = False
         if self.use_clusters:
-            self.sub_clusters = rospy.Subscriber('/nn_jackal/clusters',lmpcc_obstacle_array, self.cbClusters)
+            self.sub_clusters = rospy.Subscriber('/ellipse_objects_feed',lmpcc_obstacle_array, self.cbClusters)
         else:
             self.sub_peds = rospy.Subscriber('~peds',PedTrajVec, self.cbPeds)
 
@@ -299,7 +299,7 @@ class NN_jackal():
         # (With nothing in front of vehicle, it's not important to
         # track MPs perfectly; with an obstacle right in front, the
         # vehicle must turn in place, then drive forward.)
-        d_min = max(0.0,d_min)
+        d_min = max(0.63,d_min)
         x = 0.3
         margin = 0.3
         # y = max(d_min - 0.3, 0.0)
